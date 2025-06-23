@@ -4,17 +4,18 @@ import { Camera, Upload, Download, ArrowLeft, Sparkles, RefreshCw } from 'lucide
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { virtualTryOn } from '../lib/api'; // استيراد الدالة من api.js
 
 const VirtualTryOnPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  
+
   const [userImage, setUserImage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
 
-  // Mock product data
+  // Mock product data (هذا يجب أن يأتي من API في تطبيق حقيقي)
   const product = {
     id: productId,
     name: 'فستان صيفي أنيق',
@@ -36,14 +37,32 @@ const VirtualTryOnPage = () => {
 
   const handleTryOn = async () => {
     if (!userImage) return;
-    
+
     setIsProcessing(true);
-    
-    // Simulate AI processing
-    setTimeout(() => {
-      setResult('https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=600&fit=crop');
+    setResult(null); // مسح النتيجة السابقة
+
+    try {
+      // تحويل base64 إلى Blob/File إذا كان userImage هو base64
+      let imageFile = userImage;
+      if (userImage.startsWith("data:")) {
+        const response = await fetch(userImage);
+        const blob = await response.blob();
+        imageFile = new File([blob], "user_image.png", { type: blob.type });
+      }
+
+      const tryOnResult = await virtualTryOn(imageFile, product);
+      if (tryOnResult && tryOnResult.status === 'success') {
+        setResult(tryOnResult.try_on_image_url);
+      } else {
+        console.error("Virtual try-on failed:", tryOnResult?.message || "Unknown error");
+        setResult(null); // في حالة الفشل، لا تعرض نتيجة
+      }
+    } catch (error) {
+      console.error("Error during virtual try-on:", error);
+      setResult(null);
+    } finally {
       setIsProcessing(false);
-    }, 3000);
+    }
   };
 
   const handleUseProfileImage = () => {
@@ -71,8 +90,8 @@ const VirtualTryOnPage = () => {
       {/* Product Info */}
       <Card className="p-4 mb-6">
         <div className="flex items-center space-x-4 rtl:space-x-reverse">
-          <img 
-            src={product.image} 
+          <img
+            src={product.image}
             alt={product.name}
             className="w-16 h-20 object-cover rounded"
           />
@@ -107,7 +126,7 @@ const VirtualTryOnPage = () => {
                 </Button>
               </div>
             </div>
-            
+
             <input
               ref={fileInputRef}
               type="file"
@@ -130,8 +149,8 @@ const VirtualTryOnPage = () => {
         ) : (
           <div className="space-y-4">
             <div className="relative">
-              <img 
-                src={userImage} 
+              <img
+                src={userImage}
                 alt="صورتك"
                 className="w-full h-64 object-cover rounded-lg"
               />
@@ -145,7 +164,7 @@ const VirtualTryOnPage = () => {
               </Button>
             </div>
 
-            <Button 
+            <Button
               onClick={handleTryOn}
               disabled={isProcessing}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500"
@@ -180,7 +199,7 @@ const VirtualTryOnPage = () => {
               جاري تحليل صورتك وتطبيق المنتج عليها
             </p>
             <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2">
-              <div className="bg-purple-500 h-2 rounded-full animate-pulse" style={{width: '70%'}}></div>
+              <div className="bg-purple-500 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
             </div>
           </div>
         </Card>
@@ -193,14 +212,14 @@ const VirtualTryOnPage = () => {
             <Sparkles size={20} className="mr-2 text-purple-500" />
             النتيجة النهائية
           </h3>
-          
+
           <div className="space-y-4">
-            <img 
-              src={result} 
+            <img
+              src={result}
               alt="النتيجة"
               className="w-full h-80 object-cover rounded-lg"
             />
-            
+
             <div className="flex space-x-2 rtl:space-x-reverse">
               <Button className="flex-1">
                 <Download size={16} className="mr-2" />
@@ -226,5 +245,4 @@ const VirtualTryOnPage = () => {
   );
 };
 
-export default VirtualTryOnPage;
-
+export default VirtualTryOnPage 
